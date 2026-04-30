@@ -12,9 +12,9 @@ const MOCK_AUDIT = {
     { item: "Heineken", expected: 20, observed: 12, difference: -8, status: "Flagged" },
   ],
   transaction_summary: [
-    { transaction: "Amazon £120", category: "Inventory", confidence: 0.88, flags: ["anomaly"], status: "Flagged" },
-    { transaction: "Amazon £120", category: "Inventory", confidence: 0.88, flags: ["duplicate"], status: "Flagged" },
-    { transaction: "Tesco £45", category: "Supplies", confidence: 0.93, flags: [], status: "Approved" },
+    { transaction: "Stripe £240", category: "Income", confidence: 0.88, flags: ["duplicate"], status: "Flagged" },
+    { transaction: "FastCash Holdings £8,500", category: "Uncategorised", confidence: 0.35, flags: ["anomaly"], status: "Flagged" },
+    { transaction: "Consultancy Services £5,000", category: "Professional Services", confidence: 0.65, flags: ["anomaly"], status: "Flagged" },
   ],
   timestamp: new Date().toISOString(),
 };
@@ -55,7 +55,6 @@ function InventoryBar({ item, expected, observed }) {
           className={`h-2 transition-all duration-700 ${isShort ? "bg-terminal-red" : "bg-terminal-green"}`}
           style={{ width: `${pct}%` }}
         />
-        {/* Expected marker */}
         <div className="absolute top-0 right-0 h-2 w-0.5 bg-slate-500" style={{ right: `${100 - 100}%` }} />
       </div>
       <p className={`text-xs font-mono font-bold w-16 text-right ${isShort ? "text-terminal-red" : "text-terminal-green"}`}>
@@ -65,19 +64,144 @@ function InventoryBar({ item, expected, observed }) {
   );
 }
 
+function AIAuditReasoning({ decision, loading }) {
+  if (loading) {
+    return (
+      <div className="border border-dark-500 bg-dark-700 p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-2 h-2 bg-terminal-amber rounded-full animate-pulse" />
+          <p className="text-terminal-amber text-xs font-mono uppercase tracking-widest">
+            AI FINANCIAL INTELLIGENCE — ANALYSING...
+          </p>
+        </div>
+        <div className="space-y-2">
+          <div className="h-3 bg-dark-500 animate-pulse w-3/4" />
+          <div className="h-3 bg-dark-500 animate-pulse w-1/2" />
+          <div className="h-3 bg-dark-500 animate-pulse w-2/3" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!decision) return null;
+
+  const isEscalate = decision.escalate;
+  const statusColor =
+    decision.status === "Approved" ? "text-terminal-green" :
+    decision.status === "Flagged" ? "text-terminal-red" :
+    "text-terminal-amber";
+  const borderColor =
+    isEscalate ? "border-terminal-red" :
+    decision.status === "Approved" ? "border-terminal-green/40" :
+    "border-terminal-amber/40";
+
+  return (
+    <div className={`border ${borderColor} bg-dark-700`}>
+      {/* Escalation banner */}
+      {isEscalate && (
+        <div className="bg-terminal-red/20 border-b border-terminal-red px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-terminal-red text-lg">⚠</span>
+            <div>
+              <p className="text-terminal-red text-sm font-mono font-bold uppercase tracking-widest">
+                ESCALATION REQUIRED
+              </p>
+              <p className="text-terminal-red/80 text-xs font-mono mt-0.5">
+                {decision.escalation_reason}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => alert("Escalation ticket created. Assigned to compliance team.")}
+            className="bg-terminal-red text-white px-4 py-2 text-xs font-mono font-bold uppercase tracking-widest hover:bg-terminal-red/80 transition-colors"
+          >
+            ESCALATE TO HUMAN
+          </button>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="bg-dark-600 border-b border-dark-500 px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-terminal-amber rounded-full" />
+          <p className="text-slate-400 text-xs font-mono uppercase tracking-widest">
+            AI AUDIT REASONING — Claude Financial Intelligence
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-slate-500 text-xs font-mono">
+            confidence: {(decision.confidence * 100).toFixed(0)}%
+          </span>
+          <span className={`text-xs font-mono font-bold ${statusColor}`}>
+            {decision.status}
+          </span>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-5">
+        {/* Reasoning */}
+        <div>
+          <p className="text-slate-500 text-xs font-mono uppercase tracking-widest mb-2">
+            // reasoning
+          </p>
+          <p className="text-slate-200 text-sm font-mono leading-relaxed bg-dark-800 border border-dark-500 p-4">
+            {decision.reasoning}
+          </p>
+        </div>
+
+        {/* Risk flags */}
+        {decision.risk_flags && decision.risk_flags.length > 0 && (
+          <div>
+            <p className="text-slate-500 text-xs font-mono uppercase tracking-widest mb-3">
+              // risk flags ({decision.risk_flags.length})
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {decision.risk_flags.map((flag, i) => (
+                <span
+                  key={i}
+                  className="bg-terminal-red/10 border border-terminal-red/40 text-terminal-red text-xs font-mono px-3 py-1.5"
+                >
+                  {flag}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [auditData, setAuditData] = useState(null);
+  const [aiDecision, setAiDecision] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
   const [tick, setTick] = useState(0);
 
-  // Blinking cursor tick
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 800);
     return () => clearInterval(id);
   }, []);
 
+  const fetchAiDecision = async () => {
+    setAiLoading(true);
+    try {
+      const res = await fetch("http://localhost:8000/finance/ai-audit");
+      if (!res.ok) throw new Error("fetch failed");
+      const data = await res.json();
+      setAiDecision(data);
+    } catch {
+      // silently leave previous state
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const runAudit = async () => {
     setLoading(true);
+    // Kick off AI decision fetch in parallel
+    fetchAiDecision();
     try {
       const res = await fetch("http://localhost:8000/audit/summary", {
         method: "POST",
@@ -89,9 +213,9 @@ export default function Dashboard() {
             { item: "Heineken", count: 12, confidence: 0.76 },
           ],
           finance_results: [
-            { transaction: "Amazon £120", category: "Inventory", confidence: 0.88, flags: ["anomaly"] },
-            { transaction: "Amazon £120", category: "Inventory", confidence: 0.88, flags: ["duplicate"] },
-            { transaction: "Tesco £45", category: "Supplies", confidence: 0.93, flags: [] },
+            { transaction: "Stripe £240", category: "Income", confidence: 0.88, flags: ["duplicate"] },
+            { transaction: "FastCash Holdings £8500", category: "Uncategorised", confidence: 0.35, flags: ["anomaly"] },
+            { transaction: "Tesco £42", category: "Groceries", confidence: 0.93, flags: [] },
           ],
           expected_inventory: { "Red Bull": 30, "Coca-Cola": 48, "Heineken": 20 },
         }),
@@ -104,6 +228,9 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
+  // Auto-fetch AI decision on mount
+  useEffect(() => { fetchAiDecision(); }, []);
 
   const display = auditData || MOCK_AUDIT;
 
@@ -126,10 +253,10 @@ export default function Dashboard() {
               <span className={`text-terminal-green text-xs font-mono ${tick % 2 === 0 ? "opacity-100" : "opacity-0"}`}>█</span>
             </div>
             <h1 className="text-white text-3xl font-mono font-bold tracking-tight">
-              Inventory & Finance Audit
+              Financial Intelligence Audit
             </h1>
             <p className="text-slate-500 text-xs font-mono mt-1">
-              {new Date().toLocaleString()} — Warehouse A
+              {new Date().toLocaleString()} — Powered by Claude AI
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -232,12 +359,15 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* AI Audit Reasoning */}
+      <AIAuditReasoning decision={aiDecision} loading={aiLoading} />
+
       {/* Audit Summary Decision Card */}
       <AuditSummary data={display} />
 
       {/* Terminal footer */}
       <div className="text-xs font-mono text-slate-600 flex items-center justify-between py-2">
-        <span>audit-ai v1.0.0 — decision engine active</span>
+        <span>audit-ai v1.0.0 — claude financial intelligence active</span>
         <span>backend: localhost:8000</span>
       </div>
     </div>

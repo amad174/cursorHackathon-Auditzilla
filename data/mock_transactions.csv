@@ -1,36 +1,16 @@
 id,date,amount,vendor,description
-T001,2026-04-01,1450.00,Amazon Business,Bulk order - Red Bull 24 cans x 30
-T002,2026-04-01,89.50,Uber,Airport transfer for client meeting
-T003,2026-04-02,12.40,Pret A Manger,Team lunch
-T004,2026-04-02,420.00,Costco Wholesale,Snacks restock - mixed pallet
-T005,2026-04-03,55.20,Shell,Fuel - company van
-T006,2026-04-03,1450.00,Amazon Business,Bulk order - Red Bull 24 cans x 30
-T007,2026-04-04,18.75,Starbucks,Client coffee meeting
-T008,2026-04-05,210.00,Booker Wholesale,Drinks restock
-T009,2026-04-05,9999.00,Unknown Supplier Ltd,Equipment purchase - urgent
-T010,2026-04-06,42.10,Tesco,Office groceries
-T011,2026-04-06,99.00,Adobe,Creative Cloud monthly
-T012,2026-04-07,75.00,Uber,Late night airport pickup
-T013,2026-04-07,75.00,Uber,Late night airport pickup
-T014,2026-04-08,38.99,Zoom,Pro plan monthly
-T015,2026-04-09,260.00,B&Q,Storage shelving units
-T016,2026-04-10,15.60,Costa Coffee,Morning meeting
-T017,2026-04-10,3200.00,Amazon Business,Bulk order - mixed inventory
-T018,2026-04-11,52.00,Bolt,Cross-town delivery
-T019,2026-04-12,180.40,AWS,Monthly compute charge
-T020,2026-04-13,68.30,Sainsbury's,Pantry restock
-T021,2026-04-14,2400.00,HMRC,VAT return Q1
-T022,2026-04-15,140.00,Booker Wholesale,Beverage restock
-T023,2026-04-16,22.50,Pret A Manger,Lunch
-T024,2026-04-17,310.00,Costco Wholesale,Cleaning supplies
-T025,2026-04-18,49.90,Esso,Fuel - delivery van
-T026,2026-04-19,15000.00,Random Vendor 99,Misc payment
-T027,2026-04-20,28.40,Starbucks,Client meeting
-T028,2026-04-21,650.00,Amazon Business,Office supplies
-T029,2026-04-22,82.00,Uber,Multiple trips
-T030,2026-04-23,11.20,Costa Coffee,Coffee
-T031,2026-04-24,420.00,Costco Wholesale,Snacks restock - mixed pallet
-T032,2026-04-25,210.00,Booker Wholesale,Drinks restock
-T033,2026-04-26,99.00,Adobe,Creative Cloud monthly
-T034,2026-04-27,1100.00,Stripe,Payout - card sales (income)
-T035,2026-04-28,16.90,Pret A Manger,Lunch
+T001,2026-04-01,240.00,Stripe,Monthly processing fee - card payments
+T002,2026-04-02,180.40,AWS,Cloud compute charges - production servers
+T003,2026-04-03,48.00,Notion,Teams plan - monthly subscription
+T004,2026-04-03,240.00,Stripe,Monthly processing fee - card payments
+T005,2026-04-04,180.40,AWS,Cloud compute charges - production servers
+T006,2026-04-06,8500.00,FastCash Holdings Ltd,Equipment procurement reference FC-0042
+T007,2026-04-06,350.00,Unknown Trading Ltd,Automated transfer processed 03:15 AM
+T008,2026-04-07,5000.00,Consultancy Services Ltd,Professional advisory services Q1
+T009,2026-04-08,1200.00,HMRC,Corporation tax instalment Q1
+T010,2026-04-09,89.50,Uber,Client airport transfer - Heathrow
+T011,2026-04-10,42.30,Tesco,Office kitchen supplies
+T012,2026-04-11,320.00,Booker Wholesale,Beverages restock - cans and bottles
+T013,2026-04-12,55.20,Shell,Delivery van fuel top-up
+T014,2026-04-13,99.00,Adobe,Creative Cloud subscription - monthly
+T015,2026-04-14,22.50,Pret A Manger,Team lunch meeting

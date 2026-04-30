@@ -7,7 +7,7 @@ export default function ImageResult({ result }) {
       <div className="bg-dark-800 border border-dark-500 aspect-video flex items-center justify-center relative overflow-hidden">
         {result.annotated_image_url ? (
           <img
-            src={result.annotated_image_url}
+            src={result.annotated_image_url.startsWith('data:') ? result.annotated_image_url : `data:image/jpeg;base64,${result.annotated_image_url}`}
             alt="Annotated inventory"
             className="w-full h-full object-contain"
           />
