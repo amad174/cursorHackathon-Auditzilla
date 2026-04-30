@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 from datetime import datetime, timezone
 
-from models.schemas import AuditRequest, AuditSummaryResponse
-from services.decision_engine import (
+from backend.models.schemas import AuditRequest, AuditSummaryResponse
+from backend.services.decision_engine import (
     evaluate_inventory,
     evaluate_transactions,
     compute_overall_status,

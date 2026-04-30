@@ -1,5 +1,5 @@
 from typing import List, Dict
-from models.schemas import (
+from backend.models.schemas import (
     VisionItem,
     FinanceResult,
     InventorySummaryItem,

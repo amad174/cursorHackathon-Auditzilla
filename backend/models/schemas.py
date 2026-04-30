@@ -32,6 +32,20 @@ class VisionResult(BaseModel):
     annotated_image_url: Optional[str] = None
 
 
+class VisionAnalyseResponse(BaseModel):
+    filename: str
+    items: list[DetectedItem]
+    confidence: float
+    annotated_image_url: Optional[str] = None
+    source: str
+
+
+class VisionItem(BaseModel):
+    item: str
+    count: int
+    confidence: float
+
+
 # ---------------------------------------------------------------------------
 # PERSON 2 — Finance schemas (owned by feature/finance-audit)
 # ---------------------------------------------------------------------------
@@ -66,6 +80,29 @@ class TransactionResult(BaseModel):
         return f"{self.vendor} £{self.amount:.2f}"
 
 
+class FinanceResult(BaseModel):
+    transaction: str
+    category: str
+    confidence: float = Field(ge=0.0, le=1.0)
+    flags: list[str] = Field(default_factory=list)
+
+
+class InventorySummaryItem(BaseModel):
+    item: str
+    expected: int
+    observed: int
+    difference: int
+    status: str
+
+
+class TransactionSummaryItem(BaseModel):
+    transaction: str
+    category: str
+    confidence: float = Field(ge=0.0, le=1.0)
+    flags: list[str] = Field(default_factory=list)
+    status: str
+
+
 class FinanceSummary(BaseModel):
     """Aggregate stats across the analysed batch."""
 
@@ -83,6 +120,26 @@ class FinanceAnalyseResponse(BaseModel):
 
     transactions: list[TransactionResult]
     summary: FinanceSummary
+
+
+class AuditRequest(BaseModel):
+    """Request body for POST /audit/summary."""
+
+    vision_results: list[VisionResult]
+    finance_results: list[FinanceResult]
+    expected_inventory: dict[str, int]
+
+
+class AuditSummaryResponse(BaseModel):
+    """Response from POST /audit/summary."""
+
+    overall_status: str
+    confidence_avg: float
+    inventory_summary: list[InventorySummaryItem]
+    transaction_summary: list[TransactionSummaryItem]
+    total_discrepancies: int
+    flagged_transactions: int
+    timestamp: str
 
 
 # ---------------------------------------------------------------------------

@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.audit_routes import router as audit_router
-from api.vision_routes import router as vision_router
-from api.finance_routes import router as finance_router
+from backend.api.audit_routes import router as audit_router
+from backend.api.vision_routes import router as vision_router
+from backend.api.finance_routes import router as finance_router
 
 app = FastAPI(
     title="Audit-AI API",
