@@ -2,28 +2,141 @@ import { useState, useEffect } from "react";
 import TransactionTable from "../components/TransactionTable";
 
 const MOCK_TRANSACTIONS = [
-  { date: "2026-04-01", amount: 45.00, vendor: "Tesco", description: "Weekly supplies run", category: "Supplies", flags: "" },
-  { date: "2026-04-02", amount: 120.00, vendor: "Amazon", description: "Inventory restock - Red Bull x24", category: "Inventory", flags: "anomaly" },
-  { date: "2026-04-03", amount: 67.50, vendor: "Office Depot", description: "Printer paper and pens", category: "Office", flags: "" },
-  { date: "2026-04-04", amount: 120.00, vendor: "Amazon", description: "Inventory restock - Red Bull x24", category: "Inventory", flags: "duplicate" },
-  { date: "2026-04-05", amount: 890.00, vendor: "PC World", description: "New laptop for warehouse", category: "Equipment", flags: "anomaly" },
-  { date: "2026-04-06", amount: 32.00, vendor: "Starbucks", description: "Team coffee meeting", category: "Entertainment", flags: "" },
-  { date: "2026-04-07", amount: 200.00, vendor: "Shell", description: "Delivery van fuel", category: "Fuel", flags: "" },
-  { date: "2026-04-08", amount: 55.00, vendor: "Tesco", description: "Weekly supplies run", category: "Supplies", flags: "" },
-  { date: "2026-04-09", amount: 18.99, vendor: "Spotify", description: "Monthly subscription", category: "Software", flags: "" },
-  { date: "2026-04-10", amount: 340.00, vendor: "DHL", description: "Bulk shipping Q1", category: "Logistics", flags: "" },
-  { date: "2026-04-11", amount: 75.00, vendor: "HMRC", description: "VAT payment Q1", category: "Tax", flags: "" },
-  { date: "2026-04-12", amount: 18.99, vendor: "Spotify", description: "Monthly subscription", category: "Software", flags: "duplicate" },
-  { date: "2026-04-13", amount: 1200.00, vendor: "Airbnb", description: "Conference accommodation", category: "Travel", flags: "anomaly" },
-  { date: "2026-04-14", amount: 48.00, vendor: "Sainsbury's", description: "Staff kitchen supplies", category: "Supplies", flags: "" },
-  { date: "2026-04-15", amount: 95.00, vendor: "BT", description: "Broadband bill", category: "Utilities", flags: "" },
+  { id: "T001", date: "2026-04-01", amount: 240.00, vendor: "Stripe", description: "Monthly processing fee - card payments", category: "Income", confidence: 0.92, flags: ["duplicate"], explanation: "Classified as Income. Looks like a duplicate of another £240.00 charge from 'Stripe' within 2 days." },
+  { id: "T002", date: "2026-04-02", amount: 180.40, vendor: "AWS", description: "Cloud compute charges - production servers", category: "Software", confidence: 0.78, flags: ["duplicate"], explanation: "Classified as Software. Looks like a duplicate charge within 2 days." },
+  { id: "T003", date: "2026-04-03", amount: 48.00, vendor: "Notion", description: "Teams plan - monthly subscription", category: "Software", confidence: 0.93, flags: [], explanation: "Classified as Software. No anomalies detected." },
+  { id: "T004", date: "2026-04-03", amount: 240.00, vendor: "Stripe", description: "Monthly processing fee - card payments", category: "Income", confidence: 0.78, flags: ["duplicate"], explanation: "Duplicate of T001." },
+  { id: "T005", date: "2026-04-04", amount: 180.40, vendor: "AWS", description: "Cloud compute charges - production servers", category: "Software", confidence: 0.78, flags: ["duplicate"], explanation: "Duplicate of T002." },
+  { id: "T006", date: "2026-04-06", amount: 8500.00, vendor: "FastCash Holdings Ltd", description: "Equipment procurement reference FC-0042", category: "Uncategorised", confidence: 0.28, flags: ["anomaly"], explanation: "⚠ Unknown vendor, unusually large amount." },
+  { id: "T007", date: "2026-04-06", amount: 350.00, vendor: "Unknown Trading Ltd", description: "Automated transfer processed 03:15 AM", category: "Uncategorised", confidence: 0.32, flags: ["anomaly"], explanation: "⚠ 3am transaction to unknown vendor." },
+  { id: "T008", date: "2026-04-07", amount: 5000.00, vendor: "Consultancy Services Ltd", description: "Professional advisory services Q1", category: "Professional Services", confidence: 0.55, flags: ["anomaly"], explanation: "⚠ Round-number payment to generic consultancy vendor." },
 ];
 
 function parseTransactions(raw) {
   return raw.map(t => ({
     ...t,
-    flags: t.flags ? t.flags.split(",").map(f => f.trim()).filter(Boolean) : [],
+    flags: Array.isArray(t.flags)
+      ? t.flags
+      : (t.flags || "").split(",").map(f => f.trim()).filter(Boolean),
   }));
+}
+
+function AIChatBox({ transactions }) {
+  const [question, setQuestion] = useState("");
+  const [txId, setTxId] = useState("");
+  const [answer, setAnswer] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const flaggedTxs = transactions.filter(t => t.flags && t.flags.length > 0);
+
+  const askQuestion = async (e) => {
+    e.preventDefault();
+    if (!question.trim()) return;
+    setLoading(true);
+    setAnswer(null);
+    try {
+      const res = await fetch("http://localhost:8000/finance/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: question.trim(),
+          transaction_id: txId,
+        }),
+      });
+      if (!res.ok) throw new Error("request failed");
+      const data = await res.json();
+      setAnswer(data.answer);
+    } catch (err) {
+      setAnswer("Could not reach the AI — check that the backend is running and ANTHROPIC_API_KEY is set.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="border border-terminal-amber/40 bg-dark-700">
+      <div className="bg-dark-600 border-b border-dark-500 px-6 py-3 flex items-center gap-2">
+        <div className="w-2 h-2 bg-terminal-amber rounded-full" />
+        <p className="text-slate-400 text-xs font-mono uppercase tracking-widest">
+          AI TRANSACTION ANALYST — Ask Claude
+        </p>
+      </div>
+
+      <form onSubmit={askQuestion} className="p-6 space-y-4">
+        <div className="flex gap-3">
+          {/* Optional transaction selector */}
+          <select
+            value={txId}
+            onChange={e => setTxId(e.target.value)}
+            className="bg-dark-800 border border-dark-500 text-slate-300 text-xs font-mono px-3 py-2 focus:outline-none focus:border-terminal-amber/60 w-48"
+          >
+            <option value="">Select a transaction</option>
+            {flaggedTxs.map(t => (
+              <option key={t.id} value={t.id}>
+                {t.id} — {t.vendor}
+              </option>
+            ))}
+          </select>
+
+          {/* Question input */}
+          <input
+            type="text"
+            value={question}
+            onChange={e => setQuestion(e.target.value)}
+            placeholder="Why was this transaction flagged? Is this fraud? What should I do?"
+            className="flex-1 bg-dark-800 border border-dark-500 text-slate-200 text-xs font-mono px-4 py-2 focus:outline-none focus:border-terminal-amber/60 placeholder-slate-600"
+          />
+
+          <button
+            type="submit"
+            disabled={loading || !question.trim()}
+            className="bg-terminal-amber/10 hover:bg-terminal-amber/20 border border-terminal-amber/50 text-terminal-amber px-5 py-2 text-xs font-mono uppercase tracking-widest transition-all disabled:opacity-40 whitespace-nowrap"
+          >
+            {loading ? "ASKING..." : "▶ ASK AI"}
+          </button>
+        </div>
+
+        {/* Suggested questions */}
+        <div className="flex flex-wrap gap-2">
+          {[
+            "Why was this flagged?",
+            "Is this fraud?",
+            "What action should I take?",
+            "Explain the risk level",
+          ].map(q => (
+            <button
+              key={q}
+              type="button"
+              onClick={() => setQuestion(q)}
+              className="text-slate-600 hover:text-slate-400 text-xs font-mono px-2 py-1 border border-dark-500 hover:border-dark-400 transition-colors"
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      </form>
+
+      {/* Response */}
+      {(loading || answer) && (
+        <div className="border-t border-dark-500 px-6 pb-6 pt-4">
+          <p className="text-slate-500 text-xs font-mono uppercase tracking-widest mb-3">
+            // claude response{txId ? ` — ${txId}` : ""}
+          </p>
+          {loading ? (
+            <div className="space-y-2">
+              <div className="h-3 bg-dark-500 animate-pulse w-full" />
+              <div className="h-3 bg-dark-500 animate-pulse w-4/5" />
+              <div className="h-3 bg-dark-500 animate-pulse w-3/5" />
+            </div>
+          ) : (
+            <p className="text-slate-200 text-sm font-mono leading-relaxed bg-dark-800 border border-dark-500 p-4">
+              {answer}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function Transactions() {
@@ -104,6 +217,9 @@ export default function Transactions() {
 
       <TransactionTable transactions={transactions} />
 
+      {/* AI Chat */}
+      <AIChatBox transactions={transactions} />
+
       {/* Legend */}
       <div className="bg-dark-900 border border-dark-500 p-4">
         <p className="text-slate-600 text-xs font-mono mb-2 uppercase tracking-widest">// flag legend</p>
@@ -114,7 +230,7 @@ export default function Transactions() {
           </div>
           <div className="flex items-center gap-2">
             <span className="border-l-2 border-l-terminal-amber inline-block w-4 h-3 bg-terminal-amber/10" />
-            <span className="text-slate-500">duplicate — same amount + vendor within 30 days</span>
+            <span className="text-slate-500">duplicate — same amount + vendor within 2 days</span>
           </div>
         </div>
       </div>

@@ -157,3 +157,23 @@ class AuditSummary(BaseModel):
     vision: Optional[VisionResult] = None
     finance: Optional[FinanceAnalyseResponse] = None
     decision: AuditDecision
+
+
+class AIAuditDecision(BaseModel):
+    """Claude-generated financial intelligence audit decision."""
+    status: str  # "Approved" | "Flagged" | "Needs Review - Escalate to Human"
+    confidence: float = Field(ge=0.0, le=1.0)
+    reasoning: str
+    escalate: bool
+    escalation_reason: str
+    risk_flags: list[str] = Field(default_factory=list)
+
+
+class ChatRequest(BaseModel):
+    question: str
+    transaction_id: Optional[str] = None
+
+
+class ChatResponse(BaseModel):
+    answer: str
+    transaction_id: Optional[str] = None

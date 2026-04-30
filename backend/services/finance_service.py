@@ -163,47 +163,85 @@ def categorise(tx: Transaction) -> tuple[str, float, str]:
     return UNCATEGORISED, UNCATEGORISED_CONFIDENCE, ""
 
 
-def categorise_with_llm(tx: Transaction) -> tuple[str, float, str] | None:
-    """Optional OpenAI fallback. Returns None if LLM is unavailable.
+def _categorise_all_with_claude(txs: list[Transaction]) -> dict[str, tuple[str, float, str]]:
+    """Call Claude once to categorise all transactions in a single batch.
 
-    Only called for transactions that fall through the rules. We keep this
-    isolated so the demo never hangs on a network call: enable by setting
-    OPENAI_API_KEY *and* AUDITZILLA_USE_LLM=1.
+    Returns a mapping of tx.id -> (category, confidence, explanation).
+    Falls back to an empty dict (rule-based takes over) if the API is unavailable.
     """
-    if os.environ.get("AUDITZILLA_USE_LLM") != "1":
-        return None
-    api_key = os.environ.get("OPENAI_API_KEY")
+    import json as _json
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
-        return None
-    try:
-        from openai import OpenAI  # imported lazily so the dep is optional
-    except ImportError:
-        log.warning("openai package not installed; skipping LLM categorisation")
-        return None
+        return {}
 
-    client = OpenAI(api_key=api_key)
-    prompt = (
-        "Classify this business transaction into one of: Inventory, Transport, "
-        "Fuel, Groceries, Food & Drink, Software, Tax, Income, Uncategorised. "
-        "Return JSON {\"category\": str, \"confidence\": 0..1}.\n\n"
-        f"Vendor: {tx.vendor}\nDescription: {tx.description}\nAmount: £{tx.amount:.2f}"
-    )
     try:
-        resp = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"},
-            temperature=0.0,
+        import anthropic
+
+        client = anthropic.Anthropic(api_key=api_key)
+
+        tx_list = [
+            {
+                "id": tx.id,
+                "vendor": tx.vendor,
+                "description": tx.description,
+                "amount": tx.amount,
+                "date": str(tx.date),
+            }
+            for tx in txs
+        ]
+
+        prompt = (
+            "You are a financial intelligence agent. Categorise each business transaction below.\n\n"
+            "For every transaction return:\n"
+            "  - id: the original transaction id\n"
+            "  - category: one of Inventory, Transport, Fuel, Groceries, Food & Drink, "
+            "Software, Tax, Income, Utilities, Equipment, Professional Services, Uncategorised\n"
+            "  - confidence: 0.0-1.0\n"
+            "  - explanation: one sentence explaining the categorisation\n"
+            "  - suspicious: true if the transaction looks unusual, fraudulent, or policy-violating\n"
+            "  - suspicious_reason: brief plain-English reason when suspicious, else empty string\n\n"
+            "Return a JSON array — one object per transaction, preserving id. No markdown fences.\n\n"
+            f"Transactions:\n{_json.dumps(tx_list, indent=2)}"
         )
-        import json
 
-        data = json.loads(resp.choices[0].message.content or "{}")
-        category = str(data.get("category") or UNCATEGORISED)
-        conf = clamp(float(data.get("confidence") or 0.5))
-        return category, conf, "llm"
-    except Exception as exc:  # pragma: no cover - network path
-        log.warning("LLM categorisation failed: %s", exc)
-        return None
+        with client.messages.stream(
+            model="claude-opus-4-6",
+            max_tokens=4000,
+            system=(
+                "You are a financial intelligence agent. Categorise transactions and flag suspicious "
+                "activity. Respond only in valid JSON (a plain array, no markdown)."
+            ),
+            messages=[{"role": "user", "content": prompt}],
+        ) as stream:
+            response = stream.get_final_message()
+
+        text = next(b.text for b in response.content if b.type == "text")
+        text = text.strip()
+        if "```" in text:
+            parts = text.split("```")
+            block = parts[1]
+            if block.startswith("json"):
+                block = block[4:]
+            text = block.strip()
+
+        items = _json.loads(text)
+        result: dict[str, tuple[str, float, str]] = {}
+        for item in items:
+            tx_id = str(item["id"])
+            cat = item.get("category", UNCATEGORISED)
+            conf = clamp(float(item.get("confidence", 0.7)))
+            explanation = item.get("explanation", "")
+            if item.get("suspicious"):
+                reason = item.get("suspicious_reason", "Flagged as suspicious.")
+                explanation = f"⚠ {reason} {explanation}".strip()
+            result[tx_id] = (cat, conf, explanation)
+        log.info("Claude categorised %d transactions", len(result))
+        return result
+
+    except Exception as exc:
+        log.warning("Claude batch categorisation failed: %s", exc)
+        return {}
 
 
 # ---------------------------------------------------------------------------
@@ -329,18 +367,28 @@ def find_anomalies(
 
 
 def analyse(txs: list[Transaction]) -> FinanceAnalyseResponse:
-    """Run the full pipeline and return the API response model."""
+    """Run the full pipeline and return the API response model.
+
+    Categorisation order:
+      1. Claude batch API (when ANTHROPIC_API_KEY is set) — returns category +
+         one-line explanation + suspicious flag for every transaction at once.
+      2. Rule-based fallback for any transaction Claude didn't cover.
+    Duplicate / anomaly / repeat detection always runs regardless.
+    """
+    # Try Claude batch categorisation; falls back to {} if unavailable
+    claude_cats = _categorise_all_with_claude(txs)
+
     duplicates = find_duplicates(txs)
     repeats = find_repeats(txs)
     anomalies = find_anomalies(txs)
 
     results: list[TransactionResult] = []
     for tx in txs:
-        category, base_conf, _ = categorise(tx)
-        if category == UNCATEGORISED:
-            llm = categorise_with_llm(tx)
-            if llm is not None:
-                category, base_conf, _ = llm
+        if tx.id in claude_cats:
+            category, base_conf, ai_explanation = claude_cats[tx.id]
+        else:
+            category, base_conf, _ = categorise(tx)
+            ai_explanation = ""
 
         flags: list[str] = []
         if tx.id in anomalies:
@@ -350,8 +398,6 @@ def analyse(txs: list[Transaction]) -> FinanceAnalyseResponse:
         if tx.id in repeats:
             flags.append("repeat")
 
-        # Confidence: start with classifier confidence, penalise for each flag
-        # so reviewers see a low number when something looks off.
         conf = base_conf
         if "anomaly" in flags:
             conf = penalise(conf, 0.25)
@@ -360,7 +406,8 @@ def analyse(txs: list[Transaction]) -> FinanceAnalyseResponse:
         if "repeat" in flags:
             conf = penalise(conf, 0.1)
 
-        explanation = _build_explanation(tx, category, flags, anomalies)
+        # Merge Claude's explanation with rule-based flag details
+        explanation = _build_explanation(tx, category, flags, anomalies, ai_explanation)
 
         results.append(
             TransactionResult(
@@ -385,9 +432,14 @@ def _build_explanation(
     category: str,
     flags: list[str],
     anomaly_reasons: dict[str, str],
+    ai_explanation: str = "",
 ) -> str:
     parts: list[str] = []
-    if category == UNCATEGORISED:
+
+    # Lead with Claude's explanation when available
+    if ai_explanation:
+        parts.append(ai_explanation)
+    elif category == UNCATEGORISED:
         parts.append(
             f"Could not auto-categorise '{tx.vendor}' from rules — review manually."
         )
@@ -407,7 +459,7 @@ def _build_explanation(
     if "anomaly" in flags:
         parts.append(anomaly_reasons.get(tx.id, "Amount looks unusually large."))
 
-    if not flags and category != UNCATEGORISED:
+    if not flags and not ai_explanation and category != UNCATEGORISED:
         parts.append("No anomalies detected.")
     return " ".join(parts)
 
