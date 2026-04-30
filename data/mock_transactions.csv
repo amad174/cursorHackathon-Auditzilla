@@ -1,0 +1,16 @@
+date,amount,vendor,description,category,flags
+2026-04-01,45.00,Tesco,Weekly supplies run,Supplies,
+2026-04-02,120.00,Amazon,Inventory restock - Red Bull x24,Inventory,
+2026-04-03,67.50,Office Depot,Printer paper and pens,Office,
+2026-04-04,120.00,Amazon,Inventory restock - Red Bull x24,Inventory,duplicate
+2026-04-05,890.00,PC World,New laptop for warehouse,Equipment,anomaly
+2026-04-06,32.00,Starbucks,Team coffee meeting,Entertainment,
+2026-04-07,200.00,Shell,Delivery van fuel,Fuel,
+2026-04-08,55.00,Tesco,Weekly supplies run,Supplies,
+2026-04-09,18.99,Spotify,Monthly subscription,Software,
+2026-04-10,340.00,DHL,Bulk shipping Q1,Logistics,
+2026-04-11,75.00,HMRC,VAT payment Q1,Tax,
+2026-04-12,18.99,Spotify,Monthly subscription,Software,duplicate
+2026-04-13,1200.00,Airbnb,Conference accommodation,Travel,anomaly
+2026-04-14,48.00,Sainsbury's,Staff kitchen supplies,Supplies,
+2026-04-15,95.00,BT,Broadband bill,Utilities,

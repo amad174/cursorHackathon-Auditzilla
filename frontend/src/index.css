@@ -1,0 +1,93 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #050508;
+  color: #e2e8f0;
+  font-family: 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Scanline overlay for terminal effect */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+@layer components {
+  .card {
+    @apply bg-dark-700 border border-dark-500 rounded-none;
+  }
+
+  .badge-approved {
+    @apply bg-terminal-green/10 text-terminal-green border border-terminal-green/30 px-3 py-1 text-xs font-mono uppercase tracking-widest;
+  }
+
+  .badge-flagged {
+    @apply bg-terminal-red/10 text-terminal-red border border-terminal-red/30 px-3 py-1 text-xs font-mono uppercase tracking-widest;
+  }
+
+  .badge-review {
+    @apply bg-terminal-amber/10 text-terminal-amber border border-terminal-amber/30 px-3 py-1 text-xs font-mono uppercase tracking-widest;
+  }
+
+  .stat-card {
+    @apply bg-dark-700 border border-dark-500 p-6 relative overflow-hidden;
+  }
+
+  .stat-card::after {
+    content: '';
+    @apply absolute top-0 left-0 w-1 h-full;
+  }
+
+  .stat-card.green::after { @apply bg-terminal-green; }
+  .stat-card.red::after { @apply bg-terminal-red; }
+  .stat-card.amber::after { @apply bg-terminal-amber; }
+  .stat-card.blue::after { @apply bg-terminal-blue; }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0a0a0f; }
+::-webkit-scrollbar-thumb { background: #252540; border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: #00ff88; }
+
+/* Glow pulse animation */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 4px rgba(0, 255, 136, 0.3); }
+  50% { box-shadow: 0 0 12px rgba(0, 255, 136, 0.6); }
+}
+
+.glow-green { animation: pulse-glow 2s ease-in-out infinite; }
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.blink { animation: blink 1s step-end infinite; }
