@@ -40,7 +40,7 @@ function AIChatBox({ transactions }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           question: question.trim(),
-          transaction_id: txId || null,
+          transaction_id: txId,
         }),
       });
       if (!res.ok) throw new Error("request failed");
@@ -70,7 +70,7 @@ function AIChatBox({ transactions }) {
             onChange={e => setTxId(e.target.value)}
             className="bg-dark-800 border border-dark-500 text-slate-300 text-xs font-mono px-3 py-2 focus:outline-none focus:border-terminal-amber/60 w-48"
           >
-            <option value="">All transactions</option>
+            <option value="">Select a transaction</option>
             {flaggedTxs.map(t => (
               <option key={t.id} value={t.id}>
                 {t.id} — {t.vendor}
