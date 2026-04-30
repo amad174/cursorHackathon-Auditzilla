@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "AuditZilla Mobile",
+    "slug": "auditzilla-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "assetBundlePatterns": [
+      "**/*"
+    ]
+  }
+}
