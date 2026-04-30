@@ -7,8 +7,8 @@ edits don't collide. Keep section markers intact.
 
 from __future__ import annotations
 
-from datetime import date
-from typing import Optional
+from datetime import date, datetime
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -86,7 +86,7 @@ class FinanceAnalyseResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# PERSON 3 — Audit / decision engine schemas (placeholder)
+# PERSON 3 — Audit / decision engine schemas
 # ---------------------------------------------------------------------------
 
 
@@ -100,3 +100,35 @@ class AuditSummary(BaseModel):
     vision: Optional[VisionResult] = None
     finance: Optional[FinanceAnalyseResponse] = None
     decision: AuditDecision
+
+
+class AuditRequest(BaseModel):
+    vision_results: List[DetectedItem]
+    finance_results: List[TransactionResult]
+    expected_inventory: Dict[str, int]
+
+
+class InventorySummaryItem(BaseModel):
+    item: str
+    expected: int
+    observed: int
+    difference: int
+    status: str
+
+
+class TransactionSummaryItem(BaseModel):
+    transaction: str
+    category: str
+    confidence: float
+    flags: List[str]
+    status: str
+
+
+class AuditSummaryResponse(BaseModel):
+    overall_status: str
+    confidence_avg: float
+    inventory_summary: List[InventorySummaryItem]
+    transaction_summary: List[TransactionSummaryItem]
+    total_discrepancies: int
+    flagged_transactions: int
+    timestamp: str

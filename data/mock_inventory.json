@@ -1,0 +1,10 @@
+{
+  "expected_inventory": {
+    "Red Bull": 30,
+    "Coca-Cola": 48,
+    "Heineken": 20
+  },
+  "last_updated": "2026-04-30",
+  "location": "Warehouse A",
+  "notes": "Expected counts as of last stock take"
+}
